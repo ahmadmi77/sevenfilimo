@@ -1,0 +1,43 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Arrange project folders
+        run: |
+          mkdir -p src/main/java/ir/turk7filimo/app src/main/res/drawable
+          mv *.java src/main/java/ir/turk7filimo/app/
+          mv AndroidManifest.xml src/main/
+          mv ic_launcher.xml src/main/res/drawable/
+
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon
+
+      - name: Publish APK to Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/outputs/apk/debug/*.apk SevenFilimo.apk
+          gh release create "v${{ github.run_number }}" SevenFilimo.apk \
+            --title "Seven Filimo ${{ github.run_number }}" \
+            --notes "Download SevenFilimo.apk and install it."
